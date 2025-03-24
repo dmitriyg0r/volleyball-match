@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import './App.css';
 import { toJpeg } from 'html-to-image';
 
@@ -6,13 +6,15 @@ function App() {
   const [matchData, setMatchData] = useState({
     title: 'Кубок Команд',
     score: 'Счёт партий: 0 : 0',
+    scoreTeamSarmat: 0,
+    scoreTeamDima: 0,
     teamSarmat: {
       captain: 'Сармат',
       players: ['Гриша', 'Толя', 'Максим', 'Клауд', 'Андрей'],
       numbers: [1, 2, 3, 4, 5]
     },
     teamDima: {
-      captain: 'Дима',
+      captain: 'Дима', 
       players: ['Нисан', 'Маша', 'Паша', 'Дима', 'Веня'],
       numbers: [1, 2, 3, 4, 5]
     },
@@ -39,12 +41,24 @@ function App() {
   useEffect(() => {
     const storedData = localStorage.getItem('volleyballMatchData');
     if (storedData) {
-      setMatchData(JSON.parse(storedData));
+      try {
+        const parsedData = JSON.parse(storedData);
+        setMatchData(parsedData);
+      } catch (e) {
+        console.error('Ошибка при чтении данных из localStorage:', e);
+        localStorage.removeItem('volleyballMatchData');
+      }
     }
     
     const storedStats = localStorage.getItem('volleyballPersonalStats');
     if (storedStats) {
-      setPersonalStats(JSON.parse(storedStats));
+      try {
+        const parsedStats = JSON.parse(storedStats);
+        setPersonalStats(parsedStats);
+      } catch (e) {
+        console.error('Ошибка при чтении статистики из localStorage:', e);
+        localStorage.removeItem('volleyballPersonalStats');
+      }
     }
   }, []);
 
@@ -67,6 +81,11 @@ function App() {
         newData.substitutes[playerIndex] = value;
       } else if (team === 'score') {
         newData.score = value;
+        const scoreMatch = value.match(/(\d+)\s*:\s*(\d+)/);
+        if (scoreMatch) {
+          newData.scoreTeamSarmat = parseInt(scoreMatch[1]) || 0;
+          newData.scoreTeamDima = parseInt(scoreMatch[2]) || 0;
+        }
       } else if (team === 'title') {
         newData.title = value;
       }
@@ -109,13 +128,17 @@ function App() {
     });
   };
 
+  const sortedPersonalStats = useMemo(() => {
+    return [...personalStats].sort((a, b) => b.points - a.points);
+  }, [personalStats]);
+
   const downloadTableAsJpeg = async () => {
     if (containerRef.current) {
       try {
-        // Временно скрываем кнопки и форму перед экспортом
         const downloadButtons = document.querySelectorAll('.download-button');
         const addPlayerForm = document.querySelector('.add-player-form');
-        downloadButtons.forEach(btn => btn.style.display = 'none');
+        
+        if (downloadButtons) downloadButtons.forEach(btn => btn.style.display = 'none');
         if (addPlayerForm) addPlayerForm.style.display = 'none';
         
         const dataUrl = await toJpeg(containerRef.current, {
@@ -129,8 +152,7 @@ function App() {
           }
         });
         
-        // Возвращаем отображение кнопок и формы
-        downloadButtons.forEach(btn => btn.style.display = 'block');
+        if (downloadButtons) downloadButtons.forEach(btn => btn.style.display = 'block');
         if (addPlayerForm) addPlayerForm.style.display = 'flex';
         
         const link = document.createElement('a');
@@ -141,10 +163,10 @@ function App() {
         document.body.removeChild(link);
       } catch (error) {
         console.error('Error downloading match as JPEG:', error);
-        // В случае ошибки убедимся, что кнопки и форма снова видимы
         const downloadButtons = document.querySelectorAll('.download-button');
         const addPlayerForm = document.querySelector('.add-player-form');
-        downloadButtons.forEach(btn => btn.style.display = 'block');
+        
+        if (downloadButtons) downloadButtons.forEach(btn => btn.style.display = 'block');
         if (addPlayerForm) addPlayerForm.style.display = 'flex';
       }
     }
@@ -153,10 +175,10 @@ function App() {
   const downloadPersonalStatsAsJpeg = async () => {
     if (personalStatsRef.current) {
       try {
-        // Временно скрываем кнопки и форму перед экспортом
         const downloadButtons = document.querySelectorAll('.download-button');
         const addPlayerForm = document.querySelector('.add-player-form');
-        downloadButtons.forEach(btn => btn.style.display = 'none');
+        
+        if (downloadButtons) downloadButtons.forEach(btn => btn.style.display = 'none');
         if (addPlayerForm) addPlayerForm.style.display = 'none';
         
         const dataUrl = await toJpeg(personalStatsRef.current, {
@@ -170,8 +192,7 @@ function App() {
           }
         });
         
-        // Возвращаем отображение кнопок и формы
-        downloadButtons.forEach(btn => btn.style.display = 'block');
+        if (downloadButtons) downloadButtons.forEach(btn => btn.style.display = 'block');
         if (addPlayerForm) addPlayerForm.style.display = 'flex';
         
         const link = document.createElement('a');
@@ -182,10 +203,10 @@ function App() {
         document.body.removeChild(link);
       } catch (error) {
         console.error('Error downloading personal stats as JPEG:', error);
-        // В случае ошибки убедимся, что кнопки и форма снова видимы
         const downloadButtons = document.querySelectorAll('.download-button');
         const addPlayerForm = document.querySelector('.add-player-form');
-        downloadButtons.forEach(btn => btn.style.display = 'block');
+        
+        if (downloadButtons) downloadButtons.forEach(btn => btn.style.display = 'block');
         if (addPlayerForm) addPlayerForm.style.display = 'flex';
       }
     }
@@ -210,86 +231,164 @@ function App() {
     setPersonalStats(prevStats => prevStats.filter((_, i) => i !== index));
   };
 
+  const handleScoreChange = (team, increment = true) => {
+    setMatchData(prevData => {
+      const newData = { ...prevData };
+      
+      if (team === 'sarmat') {
+        newData.scoreTeamSarmat = increment 
+          ? newData.scoreTeamSarmat + 1 
+          : Math.max(0, newData.scoreTeamSarmat - 1);
+      } else if (team === 'dima') {
+        newData.scoreTeamDima = increment 
+          ? newData.scoreTeamDima + 1 
+          : Math.max(0, newData.scoreTeamDima - 1);
+      }
+      
+      newData.score = `Счёт партий: ${newData.scoreTeamSarmat} : ${newData.scoreTeamDima}`;
+      return newData;
+    });
+  };
+  
+  const handleResetData = () => {
+    if (window.confirm('Вы уверены, что хотите сбросить все данные? Это действие нельзя отменить.')) {
+      localStorage.removeItem('volleyballMatchData');
+      localStorage.removeItem('volleyballPersonalStats');
+      window.location.reload();
+    }
+  };
+
+  const handleSarmatTeamHeaderBlur = (e) => {
+    const text = e.target.innerText;
+    const parts = text.split(' ');
+    if (parts.length > 1) {
+      const captainName = parts.pop().replace(')', '');
+      const teamHeader = parts.join(' ');
+      handleHeaderChange('sarmatTeam', teamHeader);
+      handleCaptainChange('sarmat', captainName);
+    }
+  };
+
+  const handleDimaTeamHeaderBlur = (e) => {
+    const text = e.target.innerText;
+    const parts = text.split(' ');
+    if (parts.length > 1) {
+      const captainName = parts.pop().replace(')', '');
+      const teamHeader = parts.join(' ');
+      handleHeaderChange('dimaTeam', teamHeader);
+      handleCaptainChange('dima', captainName);
+    }
+  };
+
   return (
     <div className="container" ref={containerRef}>
-      <h1 contentEditable="true" onBlur={e => handleInputChange('title', null, e.target.innerText)}>
-        {matchData.title}
+      <h1>
+        <div 
+          contentEditable="true" 
+          onBlur={e => handleInputChange('title', null, e.target.innerText)}
+          suppressContentEditableWarning={true}
+        >
+          {matchData.title}
+        </div>
       </h1>
-      <div className="score" contentEditable="true" onBlur={e => handleInputChange('score', null, e.target.innerText)}>
-        {matchData.score}
-      </div>
-      <table ref={tableRef}>
-        <thead>
-          <tr>
-            <th className="team-sarmat" contentEditable="true" onBlur={e => handleHeaderChange('number', e.target.innerText)}>
-              {matchData.headers.number}
-            </th>
-            <th className="team-sarmat">
-              <div onBlur={e => {
-                const parts = e.target.innerText.split('(');
-                if (parts.length > 1) {
-                  handleHeaderChange('sarmatTeam', parts[0].trim());
-                  handleCaptainChange('sarmat', parts[1].replace(')', '').trim());
-                }
-              }} contentEditable="true">
-                {`${matchData.headers.sarmatTeam} (${matchData.teamSarmat.captain})`}
-              </div>
-            </th>
-            <th className="team-dima">
-              <div onBlur={e => handleHeaderChange('number', e.target.innerText)} contentEditable="true">
-                {matchData.headers.number}
-              </div>
-            </th>
-            <th className="team-dima">
-              <div onBlur={e => {
-                const parts = e.target.innerText.split('(');
-                if (parts.length > 1) {
-                  handleHeaderChange('dimaTeam', parts[0].trim());
-                  handleCaptainChange('dima', parts[1].replace(')', '').trim());
-                }
-              }} contentEditable="true">
-                {`${matchData.headers.dimaTeam} (${matchData.teamDima.captain})`}
-              </div>
-            </th>
-            <th className="substitutes" contentEditable="true" onBlur={e => handleHeaderChange('number', e.target.innerText)}>
-              {matchData.headers.number}
-            </th>
-            <th className="substitutes" contentEditable="true" onBlur={e => handleHeaderChange('substitutes', e.target.innerText)}>
-              {matchData.headers.substitutes}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {Array.from({ length: 5 }, (_, i) => (
-            <tr key={i}>
-              <td contentEditable="true" onBlur={e => handleNumberChange('sarmat', i, e.target.innerText)}>
-                {matchData.teamSarmat.numbers[i]}
-              </td>
-              <td>
-                <div contentEditable="true" onBlur={e => handleInputChange('sarmat', i, e.target.innerText)}>
-                  {matchData.teamSarmat.players[i]}
+      <div className="score-container">
+        <div className="score">
+          <div
+            contentEditable="true"
+            onBlur={e => handleInputChange('score', null, e.target.innerText)}
+            suppressContentEditableWarning={true}
+          >
+            {matchData.score}
+          </div>
+        </div>
+      
+        <table ref={tableRef}>
+          <thead>
+            <tr>
+              <th className="team-sarmat">
+                <div 
+                  contentEditable="true" 
+                  onBlur={e => handleHeaderChange('number', e.target.innerText)}
+                  suppressContentEditableWarning={true}
+                >
+                  {matchData.headers.number}
                 </div>
-              </td>
-              <td>
-                <div contentEditable="true" onBlur={e => handleNumberChange('dima', i, e.target.innerText)}>
-                  {matchData.teamDima.numbers[i]}
+              </th>
+              <th className="team-sarmat">
+                <div contentEditable="true" 
+                     onBlur={handleSarmatTeamHeaderBlur}
+                     suppressContentEditableWarning={true}>
+                  {matchData.headers.sarmatTeam} {matchData.teamSarmat.captain})
                 </div>
-              </td>
-              <td>
-                <div contentEditable="true" onBlur={e => handleInputChange('dima', i, e.target.innerText)}>
-                  {matchData.teamDima.players[i]}
+              </th>
+              <th className="team-dima">
+                <div 
+                  contentEditable="true" 
+                  onBlur={e => handleHeaderChange('number', e.target.innerText)}
+                  suppressContentEditableWarning={true}
+                >
+                  {matchData.headers.number}
                 </div>
-              </td>
-              <td className="sub-col" contentEditable="true" onBlur={e => handleNumberChange('substitutes', i, e.target.innerText)}>
-                {matchData.substituteNumbers[i]}
-              </td>
-              <td className="sub-col" contentEditable="true" onBlur={e => handleInputChange('substitutes', i, e.target.innerText)}>
-                {matchData.substitutes[i]}
-              </td>
+              </th>
+              <th className="team-dima">
+                <div contentEditable="true" 
+                     onBlur={handleDimaTeamHeaderBlur}
+                     suppressContentEditableWarning={true}>
+                  {matchData.headers.dimaTeam} {matchData.teamDima.captain})
+                </div>
+              </th>
+              <th className="substitutes">
+                <div 
+                  contentEditable="true" 
+                  onBlur={e => handleHeaderChange('number', e.target.innerText)}
+                  suppressContentEditableWarning={true}
+                >
+                  {matchData.headers.number}
+                </div>
+              </th>
+              <th className="substitutes">
+                <div 
+                  contentEditable="true" 
+                  onBlur={e => handleHeaderChange('substitutes', e.target.innerText)}
+                  suppressContentEditableWarning={true}
+                >
+                  {matchData.headers.substitutes}
+                </div>
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {Array.from({ length: 5 }, (_, i) => (
+              <tr key={i}>
+                <td contentEditable="true" onBlur={e => handleNumberChange('sarmat', i, e.target.innerText)}
+                    suppressContentEditableWarning={true}>
+                  {matchData.teamSarmat.numbers[i]}
+                </td>
+                <td contentEditable="true" onBlur={e => handleInputChange('sarmat', i, e.target.innerText)}
+                    suppressContentEditableWarning={true}>
+                  {matchData.teamSarmat.players[i]}
+                </td>
+                <td contentEditable="true" onBlur={e => handleNumberChange('dima', i, e.target.innerText)}
+                    suppressContentEditableWarning={true}>
+                  {matchData.teamDima.numbers[i]}
+                </td>
+                <td contentEditable="true" onBlur={e => handleInputChange('dima', i, e.target.innerText)}
+                    suppressContentEditableWarning={true}>
+                  {matchData.teamDima.players[i]}
+                </td>
+                <td className="sub-col" contentEditable="true" onBlur={e => handleNumberChange('substitutes', i, e.target.innerText)}
+                    suppressContentEditableWarning={true}>
+                  {matchData.substituteNumbers[i]}
+                </td>
+                <td className="sub-col" contentEditable="true" onBlur={e => handleInputChange('substitutes', i, e.target.innerText)}
+                    suppressContentEditableWarning={true}>
+                  {matchData.substitutes[i]}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <button className="download-button" onClick={downloadTableAsJpeg}>Скачать таблицу как JPEG</button>
       
       <div className="personal-stats-container" ref={personalStatsRef}>
@@ -304,27 +403,25 @@ function App() {
             </tr>
           </thead>
           <tbody>
-            {personalStats.map((player, index) => (
+            {sortedPersonalStats.map((player, index) => (
               <tr key={index}>
                 <td>{index + 1}</td>
-                <td>
-                  <div 
-                    contentEditable="true" 
-                    onBlur={e => handleStatChange(index, 'name', e.target.innerText)}
-                  >
-                    {player.name}
-                  </div>
+                <td 
+                  contentEditable="true" 
+                  onBlur={e => handleStatChange(personalStats.findIndex(p => p === player), 'name', e.target.innerText)}
+                  suppressContentEditableWarning={true}
+                >
+                  {player.name}
                 </td>
-                <td>
-                  <div 
-                    contentEditable="true" 
-                    onBlur={e => handleStatChange(index, 'points', e.target.innerText)}
-                  >
-                    {player.points}
-                  </div>
+                <td 
+                  contentEditable="true" 
+                  onBlur={e => handleStatChange(personalStats.findIndex(p => p === player), 'points', e.target.innerText)}
+                  suppressContentEditableWarning={true}
+                >
+                  {player.points}
                 </td>
                 <td className="action-column">
-                  <button className="remove-btn" onClick={() => handleRemovePlayer(index)}>✕</button>
+                  <button className="remove-btn" onClick={() => handleRemovePlayer(personalStats.findIndex(p => p === player))}>✕</button>
                 </td>
               </tr>
             ))}
@@ -349,6 +446,10 @@ function App() {
       </div>
       
       <button className="download-button" onClick={downloadPersonalStatsAsJpeg}>Скачать личный зачёт как JPEG</button>
+      
+      <div className="controls-container">
+        <button className="reset-button" onClick={handleResetData}>Сбросить все данные</button>
+      </div>
     </div>
   );
 }
