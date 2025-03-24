@@ -224,24 +224,32 @@ function App() {
             <th className="team-sarmat" contentEditable="true" onBlur={e => handleHeaderChange('number', e.target.innerText)}>
               {matchData.headers.number}
             </th>
-            <th className="team-sarmat" contentEditable="true">
-              <span contentEditable="true" onBlur={e => handleHeaderChange('sarmatTeam', e.target.innerText)}>
-                {matchData.headers.sarmatTeam}
-              </span> 
-              <span contentEditable="true" onBlur={e => handleCaptainChange('sarmat', e.target.innerText)}>
-                {matchData.teamSarmat.captain}
-              </span>)
+            <th className="team-sarmat">
+              <div onBlur={e => {
+                const parts = e.target.innerText.split('(');
+                if (parts.length > 1) {
+                  handleHeaderChange('sarmatTeam', parts[0].trim());
+                  handleCaptainChange('sarmat', parts[1].replace(')', '').trim());
+                }
+              }} contentEditable="true">
+                {`${matchData.headers.sarmatTeam} (${matchData.teamSarmat.captain})`}
+              </div>
             </th>
-            <th className="team-dima" contentEditable="true" onBlur={e => handleHeaderChange('number', e.target.innerText)}>
-              {matchData.headers.number}
+            <th className="team-dima">
+              <div onBlur={e => handleHeaderChange('number', e.target.innerText)} contentEditable="true">
+                {matchData.headers.number}
+              </div>
             </th>
-            <th className="team-dima" contentEditable="true">
-              <span contentEditable="true" onBlur={e => handleHeaderChange('dimaTeam', e.target.innerText)}>
-                {matchData.headers.dimaTeam}
-              </span> 
-              <span contentEditable="true" onBlur={e => handleCaptainChange('dima', e.target.innerText)}>
-                {matchData.teamDima.captain}
-              </span>)
+            <th className="team-dima">
+              <div onBlur={e => {
+                const parts = e.target.innerText.split('(');
+                if (parts.length > 1) {
+                  handleHeaderChange('dimaTeam', parts[0].trim());
+                  handleCaptainChange('dima', parts[1].replace(')', '').trim());
+                }
+              }} contentEditable="true">
+                {`${matchData.headers.dimaTeam} (${matchData.teamDima.captain})`}
+              </div>
             </th>
             <th className="substitutes" contentEditable="true" onBlur={e => handleHeaderChange('number', e.target.innerText)}>
               {matchData.headers.number}
@@ -257,14 +265,20 @@ function App() {
               <td contentEditable="true" onBlur={e => handleNumberChange('sarmat', i, e.target.innerText)}>
                 {matchData.teamSarmat.numbers[i]}
               </td>
-              <td contentEditable="true" onBlur={e => handleInputChange('sarmat', i, e.target.innerText)}>
-                {matchData.teamSarmat.players[i]}
+              <td>
+                <div contentEditable="true" onBlur={e => handleInputChange('sarmat', i, e.target.innerText)}>
+                  {matchData.teamSarmat.players[i]}
+                </div>
               </td>
-              <td contentEditable="true" onBlur={e => handleNumberChange('dima', i, e.target.innerText)}>
-                {matchData.teamDima.numbers[i]}
+              <td>
+                <div contentEditable="true" onBlur={e => handleNumberChange('dima', i, e.target.innerText)}>
+                  {matchData.teamDima.numbers[i]}
+                </div>
               </td>
-              <td contentEditable="true" onBlur={e => handleInputChange('dima', i, e.target.innerText)}>
-                {matchData.teamDima.players[i]}
+              <td>
+                <div contentEditable="true" onBlur={e => handleInputChange('dima', i, e.target.innerText)}>
+                  {matchData.teamDima.players[i]}
+                </div>
               </td>
               <td className="sub-col" contentEditable="true" onBlur={e => handleNumberChange('substitutes', i, e.target.innerText)}>
                 {matchData.substituteNumbers[i]}
@@ -293,17 +307,21 @@ function App() {
             {personalStats.map((player, index) => (
               <tr key={index}>
                 <td>{index + 1}</td>
-                <td 
-                  contentEditable="true" 
-                  onBlur={e => handleStatChange(index, 'name', e.target.innerText)}
-                >
-                  {player.name}
+                <td>
+                  <div 
+                    contentEditable="true" 
+                    onBlur={e => handleStatChange(index, 'name', e.target.innerText)}
+                  >
+                    {player.name}
+                  </div>
                 </td>
-                <td 
-                  contentEditable="true" 
-                  onBlur={e => handleStatChange(index, 'points', e.target.innerText)}
-                >
-                  {player.points}
+                <td>
+                  <div 
+                    contentEditable="true" 
+                    onBlur={e => handleStatChange(index, 'points', e.target.innerText)}
+                  >
+                    {player.points}
+                  </div>
                 </td>
                 <td className="action-column">
                   <button className="remove-btn" onClick={() => handleRemovePlayer(index)}>✕</button>
