@@ -37,6 +37,7 @@ function App() {
   const containerRef = useRef(null);
   const tableRef = useRef(null);
   const personalStatsRef = useRef(null);
+  const scoreSectionRef = useRef(null);
 
   useEffect(() => {
     const storedData = localStorage.getItem('volleyballMatchData');
@@ -131,6 +132,33 @@ function App() {
   const sortedPersonalStats = useMemo(() => {
     return [...personalStats].sort((a, b) => b.points - a.points);
   }, [personalStats]);
+
+  const downloadScoreSectionAsJpeg = async () => {
+    if (scoreSectionRef.current) {
+      try {
+        const dataUrl = await toJpeg(scoreSectionRef.current, {
+          quality: 1.0,
+          pixelRatio: 1.5,
+          skipAutoScale: false,
+          backgroundColor: '#ffffff',
+          style: {
+            transform: 'none',
+            transformOrigin: 'none',
+            padding: '20px'
+          }
+        });
+        
+        const link = document.createElement('a');
+        link.download = 'volleyball_score_section.jpeg';
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (error) {
+        console.error('Error downloading score section as JPEG:', error);
+      }
+    }
+  };
 
   const downloadTableAsJpeg = async () => {
     if (containerRef.current) {
@@ -282,6 +310,7 @@ function App() {
 
   return (
     <div className="container" ref={containerRef}>
+      <div ref={scoreSectionRef}>
       <h1>
         <div 
           contentEditable="true" 
@@ -389,7 +418,9 @@ function App() {
           </tbody>
         </table>
       </div>
-      <button className="download-button" onClick={downloadTableAsJpeg}>Скачать таблицу как JPEG</button>
+      </div>
+      <button className="download-button" onClick={downloadScoreSectionAsJpeg}>Скачать счёт и таблицу как JPEG</button>
+      <button className="download-button" onClick={downloadTableAsJpeg}>Скачать всю страницу как JPEG</button>
       
       <div className="personal-stats-container" ref={personalStatsRef}>
         <h2>Личный зачёт</h2>
